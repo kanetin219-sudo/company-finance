@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>全体収支 月次決算</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <style>
+    :root {
+      --bg: #F4F7FB;
+      --surface: #FFFFFF;
+      --primary: #3B5FC9;
+      --primary-light: #6B8EF5;
+      --accent: #27AE7A;
+      --accent2: #E8943B;
+      --accent3: #C93B5F;
+      --text: #1A2340;
+      --text-mid: #4A5580;
+      --text-soft: #8A94B0;
+      --border: #D8E0F0;
+      --shadow: rgba(40,60,120,0.10);
+      --warn: #D4502A;
+      --income-bg: #EFF8F5;
+      --expense-bg: #F5F0FF;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { background: var(--bg); color: var(--text); font-family: 'Noto Sans JP', sans-serif; font-size: 15px; line-height: 1.6; min-height: 100vh; }
+
+    /* ─── ログイン ─── */
+    #loginScreen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 40px 36px; width: 100%; max-width: 400px; box-shadow: 0 8px 32px var(--shadow); }
+    .login-logo { font-family: 'DM Serif Display', serif; font-size: 26px; color: var(--primary); text-align: center; margin-bottom: 4px; }
+    .login-sub { font-size: 13px; color: var(--text-soft); text-align: center; margin-bottom: 32px; }
+    .login-field { margin-bottom: 16px; }
+    .login-field label { display: block; font-size: 13px; font-weight: 700; color: var(--text-mid); margin-bottom: 6px; }
+    .login-field input { width: 100%; padding: 13px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 16px; color: var(--text); outline: none; }
+    .login-field input:focus { border-color: var(--primary-light); }
+    .login-btn { width: 100%; padding: 15px; background: var(--primary); color: #fff; border: none; border-radius: 12px; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: opacity 0.2s; }
+    .login-btn:hover { opacity: 0.9; }
+    .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .login-err { color: var(--warn); font-size: 13px; margin-top: 10px; text-align: center; display: none; }
+    .login-err.active { display: block; }
+
+    /* ─── メイン ─── */
+    #mainScreen { display: none; }
+
+    /* ─── ヘッダー ─── */
+    .admin-header { background: var(--text); color: #fff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; position: sticky; top: 0; z-index: 100; }
+    .admin-header-logo { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--primary-light); }
+    .admin-header-center { display: flex; align-items: center; gap: 10px; }
+    .month-picker { padding: 8px 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; font-family: inherit; font-size: 15px; color: #fff; cursor: pointer; outline: none; }
+    .month-picker::-webkit-calendar-picker-indicator { filter: invert(1); }
+    .btn-this-month { padding: 8px 13px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .admin-header-right { display: flex; align-items: center; gap: 12px; }
+    .admin-user { font-size: 12px; color: #bbb; }
+    .logout-btn { padding: 7px 14px; background: transparent; border: 1px solid #555; border-radius: 8px; color: #ccc; font-family: inherit; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+    .logout-btn:hover { border-color: #aaa; color: #fff; }
+
+    /* ─── 全体サマリーバー ─── */
+    .summary-bar { background: var(--text); padding: 12px 20px 16px; }
+    .summary-grid { max-width: 960px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .sum-card { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 12px 10px; text-align: center; }
+    .sum-label { font-size: 11px; color: rgba(255,255,255,0.55); font-weight: 700; margin-bottom: 4px; letter-spacing: 0.5px; }
+    .sum-value { font-size: 17px; font-weight: 700; color: #fff; }
+    .sum-value.plus { color: #5BE0A8; }
+    .sum-value.minus { color: #FF8A80; }
+
+    /* ─── タブ ─── */
+    .tab-bar { background: var(--surface); border-bottom: 2px solid var(--border); display: flex; }
+    .tab-btn { flex: 1; padding: 13px 6px; font-family: inherit; font-size: 13px; font-weight: 700; color: var(--text-soft); background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; transition: all 0.2s; }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    .container { max-width: 960px; margin: 0 auto; padding: 20px 16px 100px; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ─── 入力セクション ─── */
+    .input-section { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 14px; overflow: hidden; box-shadow: 0 2px 8px var(--shadow); }
+    .sec-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; font-weight: 700; font-size: 14px; cursor: pointer; user-select: none; }
+    .sec-header.inc { background: var(--income-bg); color: var(--accent); }
+    .sec-header.exp { background: var(--expense-bg); color: #6B3FC9; }
+    .sec-header.corp-inc { background: #EFF4FF; color: var(--primary); }
+    .sec-header.corp-exp { background: #FFF3EC; color: var(--accent2); }
+    .sec-header.anella { background: #FFF0F4; color: var(--accent3); }
+    .sec-toggle { font-size: 12px; transition: transform 0.2s; }
+    .sec-toggle.closed { transform: rotate(-90deg); }
+    .sec-body { padding: 14px 16px 16px; border-top: 1px solid var(--border); }
+    .sec-body.hidden { display: none; }
+
+    .fields-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    @media (max-width: 600px) { .fields-grid { grid-template-columns: repeat(2, 1fr); } .summary-grid { grid-template-columns: repeat(2, 1fr); } }
+    .field-item { display: flex; flex-direction: column; }
+    .field-label { font-size: 11px; font-weight: 700; color: var(--text-soft); margin-bottom: 5px; }
+    .field-wrap { display: flex; align-items: center; gap: 4px; }
+    .field-input { flex: 1; padding: 9px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px; color: var(--text); outline: none; text-align: right; min-width: 0; }
+    .field-input:focus { border-color: var(--primary-light); background: #fff; }
+    .field-unit { font-size: 12px; color: var(--text-soft); white-space: nowrap; }
+    .memo-textarea { width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 13px; color: var(--text); outline: none; resize: vertical; min-height: 70px; margin-top: 10px; }
+    .memo-textarea:focus { border-color: var(--primary-light); }
+
+    .subtotal-row { display: flex; justify-content: flex-end; align-items: center; padding: 10px 0 0; gap: 10px; border-top: 1px dashed var(--border); margin-top: 12px; }
+    .subtotal-label { font-size: 12px; color: var(--text-soft); font-weight: 700; }
+    .subtotal-value { font-size: 16px; font-weight: 700; color: var(--text); }
+
+    /* ─── 全体まとめ ─── */
+    .summary-section { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 14px; padding: 20px; box-shadow: 0 2px 8px var(--shadow); }
+    .summary-section h3 { font-size: 14px; color: var(--text-mid); margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .summary-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px dashed var(--border); }
+    .summary-row:last-child { border-bottom: none; }
+    .summary-row-label { font-size: 13px; color: var(--text-mid); }
+    .summary-row-value { font-size: 14px; font-weight: 700; }
+    .summary-total-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0 0; margin-top: 6px; border-top: 2px solid var(--border); }
+    .summary-total-label { font-size: 15px; font-weight: 700; color: var(--text); }
+    .summary-total-value { font-size: 20px; font-weight: 700; }
+    .color-income { color: var(--accent); }
+    .color-expense { color: var(--accent3); }
+    .color-plus { color: var(--accent); }
+    .color-minus { color: var(--warn); }
+
+    /* ─── アネラ表示 ─── */
+    .anella-info { background: #FFF8FA; border: 1px solid #F0C0D0; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; font-size: 13px; color: var(--accent3); }
+    .anella-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dashed #F0C0D0; }
+    .anella-row:last-child { border-bottom: none; }
+    .anella-row-label { color: var(--text-mid); }
+    .anella-row-value { font-weight: 700; color: var(--text); }
+    .anella-total { display: flex; justify-content: space-between; padding-top: 10px; margin-top: 6px; border-top: 2px solid #F0C0D0; }
+    .anella-total-label { font-weight: 700; color: var(--accent3); }
+    .anella-total-value { font-size: 17px; font-weight: 700; }
+
+    /* ─── 保存バー ─── */
+    .save-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); padding: 14px 20px; display: flex; justify-content: flex-end; align-items: center; gap: 14px; z-index: 99; box-shadow: 0 -4px 16px var(--shadow); }
+    .save-status { font-size: 13px; color: var(--text-soft); }
+    .save-status.ok { color: var(--accent); }
+    .save-status.err { color: var(--warn); }
+    .save-btn { padding: 12px 32px; background: var(--primary); color: #fff; border: none; border-radius: 10px; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; }
+    .save-btn:hover { opacity: 0.9; }
+    .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .badge { display: inline-block; font-size: 10px; background: var(--primary-light); color: #fff; border-radius: 4px; padding: 1px 6px; margin-left: 6px; vertical-align: middle; }
+  </style>
+</head>
+<body>
+
+<!-- ─── ログイン ─── -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">Monthly Finance</div>
+    <div class="login-sub">全体収支 月次決算システム</div>
+    <div class="login-field">
+      <label>メールアドレス</label>
+      <input type="email" id="loginEmail" placeholder="" autocomplete="email">
+    </div>
+    <div class="login-field">
+      <label>パスワード</label>
+      <input type="password" id="loginPass" autocomplete="current-password">
+    </div>
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">ログイン</button>
+    <div class="login-err" id="loginErr">メールアドレスまたはパスワードが違うっちゃ</div>
+  </div>
+</div>
+
+<!-- ─── メイン ─── -->
+<div id="mainScreen">
+  <header class="admin-header">
+    <div class="admin-header-logo">Monthly Finance</div>
+    <div class="admin-header-center">
+      <input type="month" class="month-picker" id="monthPicker" onchange="loadMonth()">
+      <button class="btn-this-month" onclick="goThisMonth()">今月</button>
+    </div>
+    <div class="admin-header-right">
+      <span class="admin-user" id="userEmail"></span>
+      <button class="logout-btn" onclick="doLogout()">ログアウト</button>
+    </div>
+  </header>
+
+  <!-- 全体サマリー（常時表示） -->
+  <div class="summary-bar">
+    <div class="summary-grid">
+      <div class="sum-card">
+        <div class="sum-label">個人収支差引</div>
+        <div class="sum-value" id="s_personal_diff">¥0</div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-label">法人収支差引</div>
+        <div class="sum-value" id="s_corp_diff">¥0</div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-label">アネラ損益</div>
+        <div class="sum-value" id="s_anella_diff">読込中…</div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-label">総合計（税引前）</div>
+        <div class="sum-value" id="s_total">¥0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- タブ -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('personal')">個人収支</button>
+    <button class="tab-btn" onclick="switchTab('corp')">法人収支</button>
+    <button class="tab-btn" onclick="switchTab('anella')">アネラ</button>
+    <button class="tab-btn" onclick="switchTab('summary')">全体まとめ</button>
+  </div>
+
+  <div class="container">
+
+    <!-- ════ 個人収支タブ ════ -->
+    <div class="tab-panel active" id="tab_personal">
+
+      <!-- 個人収入 -->
+      <div class="input-section">
+        <div class="sec-header inc" onclick="toggleSec('p_income')">
+          <span>収入（個人）</span>
+          <span class="sec-toggle" id="tog_p_income">▼</span>
+        </div>
+        <div class="sec-body" id="p_income">
+          <div class="fields-grid">
+            <div class="field-item">
+              <div class="field-label">給料</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_p_salary" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">UTAGE紹介</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_p_utage" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">翔子 役員報酬（受取）</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_p_shouko_yakuin" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">家賃代（受取）</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_p_yachin" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">テンプレ販売</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_p_template" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">その他</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_p_income_other" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+          </div>
+          <div class="subtotal-row">
+            <span class="subtotal-label">個人収入 合計</span>
+            <span class="subtotal-value color-income" id="sub_p_income">¥0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 個人支出（駿） -->
+      <div class="input-section">
+        <div class="sec-header exp" onclick="toggleSec('s_expense')">
+          <span>支出（駿）</span>
+          <span class="sec-toggle" id="tog_s_expense">▼</span>
+        </div>
+        <div class="sec-body" id="s_expense">
+          <div class="fields-grid">
+            <div class="field-item">
+              <div class="field-label">LP・漫画</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_lp" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">携帯</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_keitai" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">自動車保険</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_auto_hoken" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">奨学金</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_shogakukin" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">車ローン</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_car_loan" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">FWD生命保険</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_fwd" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">太陽生命</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_taiyou" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">洗濯機ローン</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_washing" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">家賃</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_yachin" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">NETFLIX</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_netflix" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">楽天ミュージック</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_rakuten_music" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">NS（ゲーム）</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_ns" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">ウォーターサーバー</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_water" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">ロイヤルロンドン</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_royal_london" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">アップルクラウド</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_apple_cloud" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">現金貯金</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_chokin" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">NISA</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_nisa" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">アプリ・HP</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_app_hp" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">宮銀</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_miyagin" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">ビットコイン積立</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_btc" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">保育料</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_hoiku" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">小規模企業共済</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_kyosai" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">消費税・住民税貯金</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_s_zeikin" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+          </div>
+          <div class="subtotal-row">
+            <span class="subtotal-label">駿 支出 合計</span>
+            <span class="subtotal-value color-expense" id="sub_s_expense">¥0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 個人支出（翔子） -->
+      <div class="input-section">
+        <div class="sec-header exp" onclick="toggleSec('sh_expense')">
+          <span>支出（翔子）</span>
+          <span class="sec-toggle" id="tog_sh_expense">▼</span>
+        </div>
+        <div class="sec-body" id="sh_expense">
+          <div class="fields-grid">
+            <div class="field-item">
+              <div class="field-label">奨学金</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_sh_shogakukin" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">携帯代</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_sh_keitai" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">オリックス生命</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_sh_orix" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">Apple</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_sh_apple" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">食費</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_sh_shokuhi" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">ガソリン</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_sh_gasorin" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">娯楽</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_sh_goraku" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">しおん NISA</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_sh_nisa" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+          </div>
+          <div class="subtotal-row">
+            <span class="subtotal-label">翔子 支出 合計</span>
+            <span class="subtotal-value color-expense" id="sub_sh_expense">¥0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 個人収支差引 -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 20px;box-shadow:0 2px 8px var(--shadow);">
+        <div class="summary-row">
+          <span class="summary-row-label">個人収入 合計</span>
+          <span class="summary-row-value color-income" id="p_total_income">¥0</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-row-label">個人支出 合計（駿＋翔子）</span>
+          <span class="summary-row-value color-expense" id="p_total_expense">¥0</span>
+        </div>
+        <div class="summary-total-row">
+          <span class="summary-total-label">個人 差引</span>
+          <span class="summary-total-value" id="p_total_diff">¥0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ 法人収支タブ ════ -->
+    <div class="tab-panel" id="tab_corp">
+
+      <!-- 法人収入 -->
+      <div class="input-section">
+        <div class="sec-header corp-inc" onclick="toggleSec('c_income')">
+          <span>収入（法人）<span class="badge">月次合計を入力</span></span>
+          <span class="sec-toggle" id="tog_c_income">▼</span>
+        </div>
+        <div class="sec-body" id="c_income">
+          <div class="fields-grid">
+            <div class="field-item" style="grid-column: span 3;">
+              <div class="field-label">法人収入 合計</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_corp_income" min="0" placeholder="0" oninput="recalc()" style="font-size:18px;font-weight:700;"><span class="field-unit">円</span></div>
+            </div>
+          </div>
+          <textarea class="memo-textarea" id="f_corp_income_memo" placeholder="内訳メモ（例：コンサル×3名、運用代行×5件 など）"></textarea>
+          <div class="subtotal-row">
+            <span class="subtotal-label">法人収入</span>
+            <span class="subtotal-value color-income" id="sub_corp_income">¥0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 法人支出（アネラ以外） -->
+      <div class="input-section">
+        <div class="sec-header corp-exp" onclick="toggleSec('c_expense')">
+          <span>支出（法人 ※アネラ除く）</span>
+          <span class="sec-toggle" id="tog_c_expense">▼</span>
+        </div>
+        <div class="sec-body" id="c_expense">
+          <div class="fields-grid">
+            <div class="field-item">
+              <div class="field-label">携帯</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_c_keitai" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">Google</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_c_google" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">iCloud</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_c_icloud" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">外注</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_c_gaichuu" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">UTAGE</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_c_utage" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">認証バッジ</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_c_badge" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">電気代</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_c_denki" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">家賃</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_c_yachin" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">楽天モバイル</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_c_rakuten_mobile" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">社労士</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_c_sharoshi" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">LINE</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_c_line" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">ウォーターサーバー</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_c_water" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">ガス・水道</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_c_gas_suido" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">社会保険</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_c_shakai_hoken" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">ウタゲ講座</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_c_utage_koza" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">役員報酬（駿）</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_c_yakuin_shuun" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">税理士</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_c_zeirishi" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">chatGPT</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_c_chatgpt" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">役員報酬（翔子）</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_c_yakuin_shouko" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+            <div class="field-item">
+              <div class="field-label">セーフティ共済</div>
+              <div class="field-wrap"><input type="number" class="field-input" id="f_c_safety" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div>
+            </div>
+          </div>
+          <div class="subtotal-row">
+            <span class="subtotal-label">法人支出 合計</span>
+            <span class="subtotal-value color-expense" id="sub_c_expense">¥0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 法人収支差引 -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 20px;box-shadow:0 2px 8px var(--shadow);">
+        <div class="summary-row">
+          <span class="summary-row-label">法人収入</span>
+          <span class="summary-row-value color-income" id="c_total_income">¥0</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-row-label">法人支出（アネラ除く）</span>
+          <span class="summary-row-value color-expense" id="c_total_expense">¥0</span>
+        </div>
+        <div class="summary-total-row">
+          <span class="summary-total-label">法人 差引（アネラ除く）</span>
+          <span class="summary-total-value" id="c_total_diff">¥0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ アネラタブ ════ -->
+    <div class="tab-panel" id="tab_anella">
+      <div class="input-section">
+        <div class="sec-header anella">
+          <span>アネラカフェ大分店 収支（自動取得）</span>
+        </div>
+        <div class="sec-body" id="anella_detail">
+          <div id="anellaLoading" style="text-align:center;padding:20px;color:var(--text-soft);">データ読込中…</div>
+          <div id="anellaContent" style="display:none;">
+            <div class="anella-info" id="anellaInfo"></div>
+            <div class="anella-row">
+              <span class="anella-row-label">カフェ売上</span>
+              <span class="anella-row-value" id="a_cafe_uriage">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">給付費</span>
+              <span class="anella-row-value" id="a_kyufu_hi">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">その他売上</span>
+              <span class="anella-row-value" id="a_sonota_uriage">¥0</span>
+            </div>
+            <div class="anella-total" style="margin-bottom:14px;">
+              <span class="anella-total-label">売上 合計</span>
+              <span class="anella-total-value color-income" id="a_income_total">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">人件費</span>
+              <span class="anella-row-value" id="a_jinken_hi">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">社会保険</span>
+              <span class="anella-row-value" id="a_shakai_hoken">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">就労工賃</span>
+              <span class="anella-row-value" id="a_roshu_kocho">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">家賃</span>
+              <span class="anella-row-value" id="a_yachin">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">電気</span>
+              <span class="anella-row-value" id="a_denki">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">ガス</span>
+              <span class="anella-row-value" id="a_gas_hi">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">水道</span>
+              <span class="anella-row-value" id="a_suido">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">駐車場</span>
+              <span class="anella-row-value" id="a_chushajo">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">ネット・電話</span>
+              <span class="anella-row-value" id="a_net_phone">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">ノウビー</span>
+              <span class="anella-row-value" id="a_knowbee">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">スマレジ</span>
+              <span class="anella-row-value" id="a_smaregi">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">Eラーニング</span>
+              <span class="anella-row-value" id="a_elearning">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">リタリコ</span>
+              <span class="anella-row-value" id="a_retailzino">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">携帯通信費</span>
+              <span class="anella-row-value" id="a_keitai">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">物販仕入</span>
+              <span class="anella-row-value" id="a_butsuhan_shiire">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">ペット用品</span>
+              <span class="anella-row-value" id="a_pet_goods">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">アロマ</span>
+              <span class="anella-row-value" id="a_aroma">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">ゴミ処理</span>
+              <span class="anella-row-value" id="a_gomi">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">車両費</span>
+              <span class="anella-row-value" id="a_sharyo_hi">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">施設保険</span>
+              <span class="anella-row-value" id="a_hoken">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">利用者保険</span>
+              <span class="anella-row-value" id="a_riyosha_hoken">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">広告費</span>
+              <span class="anella-row-value" id="a_kokoku_hi">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">返済（変成）</span>
+              <span class="anella-row-value" id="a_hensei">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">ロイヤリティ</span>
+              <span class="anella-row-value" id="a_royalty">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">ジアイーノ</span>
+              <span class="anella-row-value" id="a_jiraiino">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">地域貢献</span>
+              <span class="anella-row-value" id="a_chiiki_koken">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">利用者食事</span>
+              <span class="anella-row-value" id="a_riyosha_shokuhi">¥0</span>
+            </div>
+            <div class="anella-row">
+              <span class="anella-row-label">雑費</span>
+              <span class="anella-row-value" id="a_zappi">¥0</span>
+            </div>
+            <div class="anella-total">
+              <span class="anella-total-label">支出 合計</span>
+              <span class="anella-total-value color-expense" id="a_expense_total">¥0</span>
+            </div>
+            <div class="summary-total-row" style="margin-top:14px;">
+              <span class="summary-total-label">アネラ 損益</span>
+              <span class="summary-total-value" id="a_profit">¥0</span>
+            </div>
+          </div>
+          <div id="anellaEmpty" style="display:none;text-align:center;padding:20px;color:var(--text-soft);">この月のアネラデータはまだ入力されていないっちゃ</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ 全体まとめタブ ════ -->
+    <div class="tab-panel" id="tab_summary">
+      <div class="summary-section">
+        <h3>個人収支</h3>
+        <div class="summary-row">
+          <span class="summary-row-label">収入</span>
+          <span class="summary-row-value color-income" id="sm_p_income">¥0</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-row-label">支出（駿 + 翔子）</span>
+          <span class="summary-row-value color-expense" id="sm_p_expense">¥0</span>
+        </div>
+        <div class="summary-total-row">
+          <span class="summary-total-label">個人 差引</span>
+          <span class="summary-total-value" id="sm_p_diff">¥0</span>
+        </div>
+      </div>
+
+      <div class="summary-section">
+        <h3>法人収支（アネラ除く）</h3>
+        <div class="summary-row">
+          <span class="summary-row-label">収入</span>
+          <span class="summary-row-value color-income" id="sm_c_income">¥0</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-row-label">支出</span>
+          <span class="summary-row-value color-expense" id="sm_c_expense">¥0</span>
+        </div>
+        <div class="summary-total-row">
+          <span class="summary-total-label">法人 差引</span>
+          <span class="summary-total-value" id="sm_c_diff">¥0</span>
+        </div>
+      </div>
+
+      <div class="summary-section">
+        <h3>アネラカフェ大分店</h3>
+        <div class="summary-row">
+          <span class="summary-row-label">売上</span>
+          <span class="summary-row-value color-income" id="sm_a_income">¥0</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-row-label">支出</span>
+          <span class="summary-row-value color-expense" id="sm_a_expense">¥0</span>
+        </div>
+        <div class="summary-total-row">
+          <span class="summary-total-label">アネラ 損益</span>
+          <span class="summary-total-value" id="sm_a_diff">¥0</span>
+        </div>
+      </div>
+
+      <div class="summary-section" style="border: 2px solid var(--primary);">
+        <h3 style="color:var(--primary);">総合計</h3>
+        <div class="summary-row">
+          <span class="summary-row-label">個人 差引</span>
+          <span class="summary-row-value" id="sm_t_personal">¥0</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-row-label">法人 差引</span>
+          <span class="summary-row-value" id="sm_t_corp">¥0</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-row-label">アネラ 損益</span>
+          <span class="summary-row-value" id="sm_t_anella">¥0</span>
+        </div>
+        <div class="summary-total-row" style="border-top: 2px solid var(--primary);">
+          <span class="summary-total-label" style="color:var(--primary);font-size:17px;">総合計</span>
+          <span class="summary-total-value" id="sm_t_total" style="font-size:24px;">¥0</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /container -->
+
+  <!-- 保存バー -->
+  <div class="save-bar">
+    <span class="save-status" id="saveStatus"></span>
+    <button class="save-btn" id="saveBtn" onclick="saveData()">保存する</button>
+  </div>
+</div><!-- /mainScreen -->
+
+<script>
+// ─────────────────────────────────────────
+// 状態変数
+// ─────────────────────────────────────────
+let currentMonth = '';
+let anellaData = null;
+
+// ─────────────────────────────────────────
+// 認証
+// ─────────────────────────────────────────
+async function init() {
+  const { data: { session } } = await window.supabase.auth.getSession();
+  if (session) {
+    showMain(session.user);
+  }
+}
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('loginErr');
+  err.classList.remove('active');
+  btn.disabled = true;
+  btn.textContent = 'ログイン中…';
+  const { data, error } = await window.supabase.auth.signInWithPassword({ email, password: pass });
+  if (error) {
+    err.classList.add('active');
+    btn.disabled = false;
+    btn.textContent = 'ログイン';
+    return;
+  }
+  showMain(data.user);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') doLogin();
+});
+
+function showMain(user) {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('mainScreen').style.display = 'block';
+  document.getElementById('userEmail').textContent = user.email;
+  goThisMonth();
+}
+
+async function doLogout() {
+  await window.supabase.auth.signOut();
+  location.reload();
+}
+
+// ─────────────────────────────────────────
+// 月操作
+// ─────────────────────────────────────────
+function goThisMonth() {
+  const now = new Date();
+  const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  document.getElementById('monthPicker').value = ym;
+  loadMonth();
+}
+
+async function loadMonth() {
+  currentMonth = document.getElementById('monthPicker').value;
+  if (!currentMonth) return;
+  clearForm();
+  await Promise.all([loadCompanyData(), loadAnellaData()]);
+  recalc();
+}
+
+// ─────────────────────────────────────────
+// データ読み込み
+// ─────────────────────────────────────────
+async function loadCompanyData() {
+  const { data } = await window.supabase
+    .from('company_monthly_finance')
+    .select('*')
+    .eq('year_month', currentMonth)
+    .single();
+  if (!data) return;
+  setV('f_p_salary', data.p_salary);
+  setV('f_p_utage', data.p_utage);
+  setV('f_p_shouko_yakuin', data.p_shouko_yakuin);
+  setV('f_p_yachin', data.p_yachin);
+  setV('f_p_template', data.p_template);
+  setV('f_p_income_other', data.p_income_other);
+  setV('f_s_lp', data.s_lp);
+  setV('f_s_keitai', data.s_keitai);
+  setV('f_s_auto_hoken', data.s_auto_hoken);
+  setV('f_s_shogakukin', data.s_shogakukin);
+  setV('f_s_car_loan', data.s_car_loan);
+  setV('f_s_fwd', data.s_fwd);
+  setV('f_s_taiyou', data.s_taiyou);
+  setV('f_s_washing', data.s_washing);
+  setV('f_s_yachin', data.s_yachin);
+  setV('f_s_netflix', data.s_netflix);
+  setV('f_s_rakuten_music', data.s_rakuten_music);
+  setV('f_s_ns', data.s_ns);
+  setV('f_s_water', data.s_water);
+  setV('f_s_royal_london', data.s_royal_london);
+  setV('f_s_apple_cloud', data.s_apple_cloud);
+  setV('f_s_chokin', data.s_chokin);
+  setV('f_s_nisa', data.s_nisa);
+  setV('f_s_app_hp', data.s_app_hp);
+  setV('f_s_miyagin', data.s_miyagin);
+  setV('f_s_btc', data.s_btc);
+  setV('f_s_hoiku', data.s_hoiku);
+  setV('f_s_kyosai', data.s_kyosai);
+  setV('f_s_zeikin', data.s_zeikin);
+  setV('f_sh_shogakukin', data.sh_shogakukin);
+  setV('f_sh_keitai', data.sh_keitai);
+  setV('f_sh_orix', data.sh_orix);
+  setV('f_sh_apple', data.sh_apple);
+  setV('f_sh_shokuhi', data.sh_shokuhi);
+  setV('f_sh_gasorin', data.sh_gasorin);
+  setV('f_sh_goraku', data.sh_goraku);
+  setV('f_sh_nisa', data.sh_nisa);
+  setV('f_corp_income', data.corp_income);
+  document.getElementById('f_corp_income_memo').value = data.corp_income_memo || '';
+  setV('f_c_keitai', data.c_keitai);
+  setV('f_c_google', data.c_google);
+  setV('f_c_icloud', data.c_icloud);
+  setV('f_c_gaichuu', data.c_gaichuu);
+  setV('f_c_utage', data.c_utage);
+  setV('f_c_badge', data.c_badge);
+  setV('f_c_denki', data.c_denki);
+  setV('f_c_yachin', data.c_yachin);
+  setV('f_c_rakuten_mobile', data.c_rakuten_mobile);
+  setV('f_c_sharoshi', data.c_sharoshi);
+  setV('f_c_line', data.c_line);
+  setV('f_c_water', data.c_water);
+  setV('f_c_gas_suido', data.c_gas_suido);
+  setV('f_c_shakai_hoken', data.c_shakai_hoken);
+  setV('f_c_utage_koza', data.c_utage_koza);
+  setV('f_c_yakuin_shuun', data.c_yakuin_shuun);
+  setV('f_c_zeirishi', data.c_zeirishi);
+  setV('f_c_chatgpt', data.c_chatgpt);
+  setV('f_c_yakuin_shouko', data.c_yakuin_shouko);
+  setV('f_c_safety', data.c_safety);
+}
+
+async function loadAnellaData() {
+  document.getElementById('anellaLoading').style.display = 'block';
+  document.getElementById('anellaContent').style.display = 'none';
+  document.getElementById('anellaEmpty').style.display = 'none';
+  anellaData = null;
+
+  const { data } = await window.supabase
+    .from('anella_monthly_finance')
+    .select('*')
+    .eq('year_month', currentMonth)
+    .single();
+
+  document.getElementById('anellaLoading').style.display = 'none';
+  if (!data) {
+    document.getElementById('anellaEmpty').style.display = 'block';
+    return;
+  }
+  anellaData = data;
+
+  const income = (data.cafe_uriage || 0) + (data.kyufu_hi || 0) + (data.sonota_uriage || 0);
+  const expense = (data.jinken_hi || 0) + (data.shakai_hoken || 0) + (data.roshu_kocho || 0)
+    + (data.yachin || 0) + (data.chushajo || 0) + (data.denki || 0) + (data.suido || 0)
+    + (data.gas_hi || 0) + (data.gomi || 0) + (data.net_phone || 0) + (data.knowbee || 0)
+    + (data.smaregi || 0) + (data.elearning || 0) + (data.retailzino || 0) + (data.keitai || 0)
+    + (data.butsuhan_shiire || 0) + (data.pet_goods || 0) + (data.aroma || 0) + (data.camera || 0)
+    + (data.sharyo_hi || 0) + (data.hoken || 0) + (data.riyosha_hoken || 0)
+    + (data.kokoku_hi || 0) + (data.hensei || 0) + (data.royalty || 0) + (data.jiraiino || 0)
+    + (data.chiiki_koken || 0) + (data.zappi || 0) + (data.riyosha_shokuhi || 0);
+  const profit = income - expense;
+
+  setText('a_cafe_uriage', fmt(data.cafe_uriage || 0));
+  setText('a_kyufu_hi', fmt(data.kyufu_hi || 0));
+  setText('a_sonota_uriage', fmt(data.sonota_uriage || 0));
+  setText('a_income_total', fmt(income));
+  setText('a_jinken_hi', fmt(data.jinken_hi || 0));
+  setText('a_shakai_hoken', fmt(data.shakai_hoken || 0));
+  setText('a_roshu_kocho', fmt(data.roshu_kocho || 0));
+  setText('a_yachin', fmt(data.yachin || 0));
+  setText('a_denki', fmt(data.denki || 0));
+  setText('a_gas_hi', fmt(data.gas_hi || 0));
+  setText('a_suido', fmt(data.suido || 0));
+  setText('a_chushajo', fmt(data.chushajo || 0));
+  setText('a_net_phone', fmt(data.net_phone || 0));
+  setText('a_knowbee', fmt(data.knowbee || 0));
+  setText('a_smaregi', fmt(data.smaregi || 0));
+  setText('a_elearning', fmt(data.elearning || 0));
+  setText('a_retailzino', fmt(data.retailzino || 0));
+  setText('a_keitai', fmt(data.keitai || 0));
+  setText('a_butsuhan_shiire', fmt(data.butsuhan_shiire || 0));
+  setText('a_pet_goods', fmt(data.pet_goods || 0));
+  setText('a_aroma', fmt(data.aroma || 0));
+  setText('a_gomi', fmt(data.gomi || 0));
+  setText('a_sharyo_hi', fmt(data.sharyo_hi || 0));
+  setText('a_hoken', fmt(data.hoken || 0));
+  setText('a_riyosha_hoken', fmt(data.riyosha_hoken || 0));
+  setText('a_kokoku_hi', fmt(data.kokoku_hi || 0));
+  setText('a_hensei', fmt(data.hensei || 0));
+  setText('a_royalty', fmt(data.royalty || 0));
+  setText('a_jiraiino', fmt(data.jiraiino || 0));
+  setText('a_chiiki_koken', fmt(data.chiiki_koken || 0));
+  setText('a_riyosha_shokuhi', fmt(data.riyosha_shokuhi || 0));
+  setText('a_zappi', fmt(data.zappi || 0));
+  setText('a_expense_total', fmt(expense));
+
+  const profitEl = document.getElementById('a_profit');
+  profitEl.textContent = fmt(profit);
+  profitEl.className = 'summary-total-value ' + (profit >= 0 ? 'color-plus' : 'color-minus');
+
+  document.getElementById('anellaContent').style.display = 'block';
+  recalc();
+}
+
+// ─────────────────────────────────────────
+// 再計算
+// ─────────────────────────────────────────
+function recalc() {
+  const pIncome = sum(['f_p_salary','f_p_utage','f_p_shouko_yakuin','f_p_yachin','f_p_template','f_p_income_other']);
+  const sExpense = sum(['f_s_lp','f_s_keitai','f_s_auto_hoken','f_s_shogakukin','f_s_car_loan','f_s_fwd',
+    'f_s_taiyou','f_s_washing','f_s_yachin','f_s_netflix','f_s_rakuten_music','f_s_ns','f_s_water',
+    'f_s_royal_london','f_s_apple_cloud','f_s_chokin','f_s_nisa','f_s_app_hp','f_s_miyagin','f_s_btc',
+    'f_s_hoiku','f_s_kyosai','f_s_zeikin']);
+  const shExpense = sum(['f_sh_shogakukin','f_sh_keitai','f_sh_orix','f_sh_apple','f_sh_shokuhi','f_sh_gasorin','f_sh_goraku','f_sh_nisa']);
+  const pExpense = sExpense + shExpense;
+  const pDiff = pIncome - pExpense;
+
+  const cIncome = getV('f_corp_income');
+  const cExpense = sum(['f_c_keitai','f_c_google','f_c_icloud','f_c_gaichuu','f_c_utage','f_c_badge',
+    'f_c_denki','f_c_yachin','f_c_rakuten_mobile','f_c_sharoshi','f_c_line','f_c_water','f_c_gas_suido',
+    'f_c_shakai_hoken','f_c_utage_koza','f_c_yakuin_shuun','f_c_zeirishi','f_c_chatgpt','f_c_yakuin_shouko','f_c_safety']);
+  const cDiff = cIncome - cExpense;
+
+  let aIncome = 0, aExpense = 0;
+  if (anellaData) {
+    aIncome = (anellaData.cafe_uriage || 0) + (anellaData.kyufu_hi || 0) + (anellaData.sonota_uriage || 0);
+    aExpense = (anellaData.jinken_hi || 0) + (anellaData.shakai_hoken || 0) + (anellaData.roshu_kocho || 0)
+      + (anellaData.yachin || 0) + (anellaData.chushajo || 0) + (anellaData.denki || 0) + (anellaData.suido || 0)
+      + (anellaData.gas_hi || 0) + (anellaData.gomi || 0) + (anellaData.net_phone || 0) + (anellaData.knowbee || 0)
+      + (anellaData.smaregi || 0) + (anellaData.elearning || 0) + (anellaData.retailzino || 0) + (anellaData.keitai || 0)
+      + (anellaData.butsuhan_shiire || 0) + (anellaData.pet_goods || 0) + (anellaData.aroma || 0) + (anellaData.camera || 0)
+      + (anellaData.sharyo_hi || 0) + (anellaData.hoken || 0) + (anellaData.riyosha_hoken || 0)
+      + (anellaData.kokoku_hi || 0) + (anellaData.hensei || 0) + (anellaData.royalty || 0) + (anellaData.jiraiino || 0)
+      + (anellaData.chiiki_koken || 0) + (anellaData.zappi || 0) + (anellaData.riyosha_shokuhi || 0);
+  }
+  const aDiff = aIncome - aExpense;
+  const total = pDiff + cDiff + aDiff;
+
+  // 小計
+  setText('sub_p_income', fmt(pIncome));
+  setText('sub_s_expense', fmt(sExpense));
+  setText('sub_sh_expense', fmt(shExpense));
+  setText('sub_corp_income', fmt(cIncome));
+  setText('sub_c_expense', fmt(cExpense));
+
+  // 個人タブ合計
+  setText('p_total_income', fmt(pIncome));
+  setText('p_total_expense', fmt(pExpense));
+  setDiff('p_total_diff', pDiff);
+
+  // 法人タブ合計
+  setText('c_total_income', fmt(cIncome));
+  setText('c_total_expense', fmt(cExpense));
+  setDiff('c_total_diff', cDiff);
+
+  // 全体まとめ
+  setText('sm_p_income', fmt(pIncome));
+  setText('sm_p_expense', fmt(pExpense));
+  setDiff('sm_p_diff', pDiff);
+  setText('sm_c_income', fmt(cIncome));
+  setText('sm_c_expense', fmt(cExpense));
+  setDiff('sm_c_diff', cDiff);
+  setText('sm_a_income', fmt(aIncome));
+  setText('sm_a_expense', fmt(aExpense));
+  setDiff('sm_a_diff', aDiff);
+  setDiff('sm_t_personal', pDiff);
+  setDiff('sm_t_corp', cDiff);
+  setDiff('sm_t_anella', aDiff);
+  setDiff('sm_t_total', total);
+
+  // サマリーバー
+  setDiffSum('s_personal_diff', pDiff);
+  setDiffSum('s_corp_diff', cDiff);
+  if (anellaData) setDiffSum('s_anella_diff', aDiff);
+  else setText('s_anella_diff', '未入力');
+  setDiffSum('s_total', total);
+}
+
+// ─────────────────────────────────────────
+// 保存
+// ─────────────────────────────────────────
+async function saveData() {
+  if (!currentMonth) return;
+  const btn = document.getElementById('saveBtn');
+  const status = document.getElementById('saveStatus');
+  btn.disabled = true;
+  status.textContent = '保存中…';
+  status.className = 'save-status';
+
+  const payload = {
+    year_month: currentMonth,
+    p_salary: getV('f_p_salary'), p_utage: getV('f_p_utage'),
+    p_shouko_yakuin: getV('f_p_shouko_yakuin'), p_yachin: getV('f_p_yachin'),
+    p_template: getV('f_p_template'), p_income_other: getV('f_p_income_other'),
+    s_lp: getV('f_s_lp'), s_keitai: getV('f_s_keitai'), s_auto_hoken: getV('f_s_auto_hoken'),
+    s_shogakukin: getV('f_s_shogakukin'), s_car_loan: getV('f_s_car_loan'), s_fwd: getV('f_s_fwd'),
+    s_taiyou: getV('f_s_taiyou'), s_washing: getV('f_s_washing'), s_yachin: getV('f_s_yachin'),
+    s_netflix: getV('f_s_netflix'), s_rakuten_music: getV('f_s_rakuten_music'), s_ns: getV('f_s_ns'),
+    s_water: getV('f_s_water'), s_royal_london: getV('f_s_royal_london'), s_apple_cloud: getV('f_s_apple_cloud'),
+    s_chokin: getV('f_s_chokin'), s_nisa: getV('f_s_nisa'), s_app_hp: getV('f_s_app_hp'),
+    s_miyagin: getV('f_s_miyagin'), s_btc: getV('f_s_btc'), s_hoiku: getV('f_s_hoiku'),
+    s_kyosai: getV('f_s_kyosai'), s_zeikin: getV('f_s_zeikin'),
+    sh_shogakukin: getV('f_sh_shogakukin'), sh_keitai: getV('f_sh_keitai'), sh_orix: getV('f_sh_orix'),
+    sh_apple: getV('f_sh_apple'), sh_shokuhi: getV('f_sh_shokuhi'), sh_gasorin: getV('f_sh_gasorin'),
+    sh_goraku: getV('f_sh_goraku'), sh_nisa: getV('f_sh_nisa'),
+    corp_income: getV('f_corp_income'),
+    corp_income_memo: document.getElementById('f_corp_income_memo').value,
+    c_keitai: getV('f_c_keitai'), c_google: getV('f_c_google'), c_icloud: getV('f_c_icloud'),
+    c_gaichuu: getV('f_c_gaichuu'), c_utage: getV('f_c_utage'), c_badge: getV('f_c_badge'),
+    c_denki: getV('f_c_denki'), c_yachin: getV('f_c_yachin'), c_rakuten_mobile: getV('f_c_rakuten_mobile'),
+    c_sharoshi: getV('f_c_sharoshi'), c_line: getV('f_c_line'), c_water: getV('f_c_water'),
+    c_gas_suido: getV('f_c_gas_suido'), c_shakai_hoken: getV('f_c_shakai_hoken'),
+    c_utage_koza: getV('f_c_utage_koza'), c_yakuin_shuun: getV('f_c_yakuin_shuun'),
+    c_zeirishi: getV('f_c_zeirishi'), c_chatgpt: getV('f_c_chatgpt'),
+    c_yakuin_shouko: getV('f_c_yakuin_shouko'), c_safety: getV('f_c_safety'),
+    updated_at: new Date().toISOString()
+  };
+
+  const { error } = await window.supabase
+    .from('company_monthly_finance')
+    .upsert(payload, { onConflict: 'year_month' });
+
+  btn.disabled = false;
+  if (error) {
+    status.textContent = '保存失敗: ' + error.message;
+    status.className = 'save-status err';
+  } else {
+    status.textContent = '保存しました！';
+    status.className = 'save-status ok';
+    setTimeout(() => { status.textContent = ''; }, 3000);
+  }
+}
+
+// ─────────────────────────────────────────
+// ユーティリティ
+// ─────────────────────────────────────────
+function getV(id) { return parseInt(document.getElementById(id).value || '0', 10) || 0; }
+function setV(id, v) { const el = document.getElementById(id); if (el) el.value = v || 0; }
+function setText(id, t) { const el = document.getElementById(id); if (el) el.textContent = t; }
+function sum(ids) { return ids.reduce((acc, id) => acc + getV(id), 0); }
+function fmt(n) { return '¥' + n.toLocaleString('ja-JP'); }
+
+function setDiff(id, v) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = fmt(v);
+  el.className = 'summary-total-value ' + (v >= 0 ? 'color-plus' : 'color-minus');
+}
+function setDiffSum(id, v) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = fmt(v);
+  el.className = 'sum-value ' + (v >= 0 ? 'plus' : 'minus');
+}
+
+function clearForm() {
+  document.querySelectorAll('.field-input').forEach(el => el.value = '');
+  document.getElementById('f_corp_income_memo').value = '';
+  anellaData = null;
+  setText('s_anella_diff', '読込中…');
+  document.getElementById('s_anella_diff').className = 'sum-value';
+}
+
+function toggleSec(id) {
+  const body = document.getElementById(id);
+  const tog = document.getElementById('tog_' + id);
+  if (!body) return;
+  body.classList.toggle('hidden');
+  if (tog) tog.classList.toggle('closed');
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab_' + name).classList.add('active');
+  const idx = ['personal','corp','anella','summary'].indexOf(name);
+  document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+}
+
+// 起動
+init();
+</script>
+</body>
+</html>
