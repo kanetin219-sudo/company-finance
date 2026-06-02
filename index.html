@@ -954,7 +954,6 @@ function setDiffSum(id, v) {
 function clearForm() {
   document.querySelectorAll('.field-input').forEach(el=>el.value='');
   incomeDetails=[]; renderIncomeDetails(); anellaData=null;
-  setText('s_anella_diff','読込中…'); document.getElementById('s_anella_diff').className='sum-value';
 }
 function toggleSec(id) {
   const body=document.getElementById(id); const tog=document.getElementById('tog_'+id);
