@@ -586,8 +586,14 @@ async function loadCompanyData() {
 }
 
 async function loadIncomeDetails() {
-  const { data } = await window.supabase.from('company_income_detail')
+  const { data, error } = await window.supabase.from('company_income_detail')
     .select('*').eq('year_month', currentMonth).order('created_at');
+  if (error) {
+    console.error('明細取得エラー:', error);
+    const list = document.getElementById('detailList');
+    if (list) list.innerHTML = `<div class="detail-empty" style="color:var(--warn);">取得エラー: ${error.message}</div>`;
+    return;
+  }
   incomeDetails = data || [];
   renderIncomeDetails();
 }
