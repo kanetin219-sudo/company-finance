@@ -185,7 +185,7 @@
   <header class="admin-header">
     <div class="admin-header-logo">kanetin inc</div>
     <div class="admin-header-center">
-      <input type="month" class="month-picker" id="monthPicker" onchange="loadMonth()">
+      <input type="month" class="month-picker" id="monthPicker" onchange="loadMonth()" oninput="loadMonth()">
       <button class="btn-this-month" onclick="goThisMonth()">今月</button>
     </div>
     <div class="admin-header-right">
@@ -519,7 +519,18 @@ let chartInstance = null;
 // ─────────────────────────────────────────
 async function init() {
   const { data: { session } } = await window.supabase.auth.getSession();
-  if (session) showMain(session.user);
+  if (session) {
+    showMain(session.user);
+  }
+}
+
+function showCurrentMonth() {
+  const now = new Date();
+  const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const picker = document.getElementById('monthPicker');
+  picker.value = ym;
+  currentMonth = ym;
+  loadMonth();
 }
 
 async function doLogin() {
@@ -556,13 +567,17 @@ async function doLogout() {
 // ─────────────────────────────────────────
 function goThisMonth() {
   const now = new Date();
-  document.getElementById('monthPicker').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const picker = document.getElementById('monthPicker');
+  picker.value = ym;
+  currentMonth = ym;
   loadMonth();
 }
 
 async function loadMonth() {
-  currentMonth = document.getElementById('monthPicker').value;
-  if (!currentMonth) return;
+  const val = document.getElementById('monthPicker').value;
+  if (!val) return;
+  currentMonth = val;
   clearForm();
   await Promise.all([loadCompanyData(), loadIncomeDetails(), loadAnellaData()]);
   recalc();
@@ -572,7 +587,8 @@ async function loadMonth() {
 // データ読み込み
 // ─────────────────────────────────────────
 async function loadCompanyData() {
-  const { data } = await window.supabase.from('company_monthly_finance').select('*').eq('year_month', currentMonth).single();
+  const { data, error } = await window.supabase.from('company_monthly_finance').select('*').eq('year_month', currentMonth).maybeSingle();
+  if (error) console.error('finance取得エラー:', error);
   if (!data) return;
   const flds = ['p_salary','p_utage','p_shouko_yakuin','p_yachin','p_template',
     's_lp','s_keitai','s_auto_hoken','s_shogakukin','s_car_loan','s_fwd','s_taiyou','s_washing','s_yachin',
