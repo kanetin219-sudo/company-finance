@@ -79,9 +79,13 @@
     .sec-toggle.closed { transform: rotate(-90deg); }
     .sec-body { padding: 14px 16px 16px; border-top: 1px solid var(--border); }
     .sec-body.hidden { display: none; }
+    @media (max-width: 600px) { .sec-body { padding-bottom: 20px; } }
 
     .fields-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    @media (max-width: 600px) { .fields-grid { grid-template-columns: repeat(2, 1fr); } .summary-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px) {
+      .fields-grid { grid-template-columns: repeat(3, minmax(140px, 1fr)); overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+    }
     .field-item { display: flex; flex-direction: column; }
     .field-label { font-size: 11px; font-weight: 700; color: var(--text-soft); margin-bottom: 5px; }
     .field-wrap { display: flex; align-items: center; gap: 4px; }
@@ -95,7 +99,14 @@
 
     /* ─── 収入明細 ─── */
     .detail-add-form { display: grid; grid-template-columns: 80px 1fr 110px 90px auto; gap: 8px; align-items: center; margin-bottom: 14px; }
-    @media (max-width: 600px) { .detail-add-form { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 600px) {
+      .detail-add-form { display: flex; flex-wrap: wrap; gap: 8px; }
+      .detail-add-form > div:nth-child(1) { flex: 0 0 calc(50% - 4px); }
+      .detail-add-form > div:nth-child(2) { flex: 0 0 calc(50% - 4px); }
+      .detail-add-form > div:nth-child(3) { flex: 0 0 calc(50% - 4px); }
+      .detail-add-form > div:nth-child(4) { flex: 0 0 calc(50% - 4px); }
+      .detail-add-form > button { flex: 0 0 100%; }
+    }
     .detail-input { padding: 8px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 13px; color: var(--text); outline: none; width: 100%; }
     .detail-input:focus { border-color: var(--primary-light); background: #fff; }
     .detail-select { padding: 8px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 13px; color: var(--text); outline: none; cursor: pointer; }
