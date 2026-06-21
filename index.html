@@ -600,7 +600,6 @@ async function loadMonth() {
 async function loadCompanyData() {
   const { data, error } = await window.supabase.from('company_monthly_finance').select('*').eq('year_month', currentMonth).maybeSingle();
   if (error) console.error('finance取得エラー:', error);
-  if (!data) return;
   const flds = ['p_salary','p_utage','p_shouko_yakuin','p_yachin','p_template',
     's_lp','s_keitai','s_auto_hoken','s_shogakukin','s_car_loan','s_fwd','s_taiyou','s_washing','s_yachin',
     's_netflix','s_rakuten_music','s_ns','s_water','s_royal_london','s_apple_cloud',
@@ -609,6 +608,17 @@ async function loadCompanyData() {
     'c_keitai','c_google','c_icloud','c_gaichuu','c_utage','c_badge','c_denki','c_yachin',
     'c_rakuten_mobile','c_sharoshi','c_line','c_water','c_gas_suido','c_shakai_hoken',
     'c_utage_koza','c_yakuin_shuun','c_zeirishi','c_chatgpt','c_yakuin_shouko','c_safety'];
+  if (!data) {
+    const FIXED_FIELDS = ['s_auto_hoken','s_fwd','s_taiyou','s_washing','s_netflix','s_rakuten_music','s_ns','s_water','s_royal_london','s_apple_cloud','s_chokin','s_nisa','s_app_hp','s_miyagin','s_btc','s_hoiku','s_kyosai','s_zeikin','sh_shogakukin','sh_keitai','sh_orix','sh_apple','sh_nisa','c_keitai','c_google','c_icloud','c_denki','c_yachin','c_sharoshi','c_line','c_water','c_gas_suido','c_shakai_hoken','c_zeirishi','c_chatgpt','c_yakuin_shouko','c_safety'];
+    const { data: prevData } = await window.supabase.from('company_monthly_finance').select('*').lt('year_month', currentMonth).order('year_month', { ascending: false }).limit(1).maybeSingle();
+    if (prevData) {
+      FIXED_FIELDS.forEach(f => {
+        if (prevData[f]) setV('f_' + f, prevData[f]);
+      });
+      console.log('固定費を前月から自動入力しました');
+    }
+    return;
+  }
   flds.forEach(f => setV('f_' + f, data[f]));
 }
 
