@@ -330,6 +330,9 @@
           <div class="detail-add-form">
             <input type="text" class="detail-input" id="d_date" placeholder="4/25">
             <input type="text" class="detail-input" id="d_name" placeholder="誰から / 何のサービス">
+            <select class="detail-select" id="d_name_select" onchange="setServiceName()">
+              <option value="">よく使うサービスから選ぶ</option>
+            </select>
             <input type="number" class="detail-input" id="d_amount" placeholder="金額" min="0" style="text-align:right;">
             <select class="detail-select" id="d_category">
               <option value="corp">法人</option>
@@ -738,6 +741,25 @@ function renderIncomeDetails() {
   setText('corp_income_total', fmt(corpTotal));
   setText('personal_income_total', fmt(personalTotal));
   setText('all_income_total', fmt(corpTotal+personalTotal));
+  updateServiceNameDropdown();
+}
+
+function updateServiceNameDropdown() {
+  const uniqueNames = [...new Set(incomeDetails.map(d => d.name).filter(n => n))].sort();
+  const select = document.getElementById('d_name_select');
+  const currentValue = select.value;
+  select.innerHTML = '<option value="">よく使うサービスから選ぶ</option>' +
+    uniqueNames.map(name => `<option value="${escHtml(name)}">${escHtml(name)}</option>`).join('');
+  select.value = currentValue;
+}
+
+function setServiceName() {
+  const select = document.getElementById('d_name_select');
+  const input = document.getElementById('d_name');
+  if (select.value) {
+    input.value = select.value;
+    select.value = '';
+  }
 }
 
 // ─────────────────────────────────────────
