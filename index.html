@@ -721,6 +721,29 @@ async function addIncomeDetail() {
   await syncIncomeToFinance();
 }
 
+async function editIncomeDetail(id) {
+  const detail = incomeDetails.find(d => d.id === id);
+  if (!detail) return;
+  document.getElementById('d_date').value = detail.income_date || '';
+  document.getElementById('d_name').value = detail.name || '';
+  document.getElementById('d_amount').value = detail.amount || '';
+  document.getElementById('d_category').value = detail.category || 'corp';
+  document.getElementById('d_name_select').value = '';
+
+  const btn = document.querySelector('.detail-add-btn');
+  const origText = btn.textContent;
+  btn.textContent = '更新';
+
+  const handleUpdate = async () => {
+    await deleteIncomeDetail(id);
+    await addIncomeDetail();
+    btn.textContent = origText;
+    btn.removeEventListener('click', handleUpdate);
+  };
+
+  btn.addEventListener('click', handleUpdate, { once: true });
+}
+
 async function deleteIncomeDetail(id) {
   if (!confirm('削除するっちゃ？')) return;
   await window.supabase.from('company_income_detail').delete().eq('id', id);
@@ -750,16 +773,28 @@ function renderCorpFixedItems() {
   } else {
     container.innerHTML = corpFixedItems.map((item, idx) => `
       <div class="field-item">
-        <div class="field-label">${escHtml(item.name)}</div>
+        <div class="field-label">
+          <input type="text" class="field-input" id="c_edit_name_${idx}" value="${escHtml(item.name)}" style="border:1px solid var(--border);padding:4px;border-radius:6px;font-size:13px;width:100%;">
+        </div>
         <div class="field-wrap">
-          <input type="number" class="field-input" value="${item.amount}" min="0" onchange="updateCorpFixedItem(${idx}, this.value)" style="text-align:right;">
+          <input type="number" class="field-input" id="c_edit_amount_${idx}" value="${item.amount}" min="0" style="text-align:right;">
           <span class="field-unit">円</span>
-          <button onclick="deleteCorpFixedItem(${idx})" style="background:none;border:none;color:var(--warn);cursor:pointer;padding:0 4px;font-weight:bold;">×</button>
+          <button onclick="updateCorpFixedItemEdit(${idx})" title="保存" style="background:none;border:none;color:#27AE7A;cursor:pointer;padding:0 4px;font-weight:bold;font-size:16px;">✓</button>
+          <button onclick="deleteCorpFixedItem(${idx})" title="削除" style="background:none;border:none;color:var(--warn);cursor:pointer;padding:0 4px;font-weight:bold;">×</button>
         </div>
       </div>
     `).join('');
   }
   updateCorpFixedTotal();
+}
+
+function updateCorpFixedItemEdit(idx) {
+  const name = document.getElementById('c_edit_name_' + idx).value.trim();
+  const amount = parseInt(document.getElementById('c_edit_amount_' + idx).value) || 0;
+  if (!name) { alert('項目名を入力してください'); return; }
+  corpFixedItems[idx] = {name, amount};
+  renderCorpFixedItems();
+  saveCorpFixedItems();
 }
 
 function updateCorpFixedItem(idx, amount) {
@@ -811,6 +846,7 @@ function renderIncomeDetails() {
         <span class="detail-name">${escHtml(d.name)}</span>
         <span class="detail-amount">${fmt(d.amount)}</span>
         <span class="detail-cat ${d.category}">${d.category==='corp'?'法人':'個人'}</span>
+        <button class="detail-del" onclick="editIncomeDetail('${d.id}')" style="background:none;border:none;color:#3B5FC9;cursor:pointer;padding:0 8px;font-weight:bold;">編集</button>
         <button class="detail-del" onclick="deleteIncomeDetail('${d.id}')">削除</button>
       </div>`).join('');
   }
