@@ -629,7 +629,7 @@ async function loadCompanyData() {
     'c_rakuten_mobile','c_sharoshi','c_line','c_water','c_gas_suido','c_shakai_hoken',
     'c_utage_koza','c_yakuin_shuun','c_zeirishi','c_chatgpt','c_yakuin_shouko','c_safety','c_setsuhai','c_ryohi'];
   if (!data) {
-    const FIXED_FIELDS = ['s_auto_hoken','s_fwd','s_taiyou','s_washing','s_netflix','s_rakuten_music','s_ns','s_water','s_royal_london','s_apple_cloud','s_chokin','s_nisa','s_app_hp','s_miyagin','s_btc','s_hoiku','s_kyosai','s_zeikin','sh_shogakukin','sh_keitai','sh_orix','sh_apple','sh_nisa','c_keitai','c_google','c_icloud','c_denki','c_yachin','c_sharoshi','c_line','c_water','c_gas_suido','c_shakai_hoken','c_zeirishi','c_chatgpt','c_yakuin_shouko','c_safety','c_setsuhai','c_ryohi'];
+    const FIXED_FIELDS = ['s_lp','s_keitai','s_auto_hoken','s_shogakukin','s_car_loan','s_fwd','s_taiyou','s_washing','s_yachin','s_netflix','s_rakuten_music','s_ns','s_water','s_royal_london','s_apple_cloud','s_chokin','s_nisa','s_app_hp','s_miyagin','s_btc','s_hoiku','s_kyosai','s_zeikin','sh_shogakukin','sh_keitai','sh_orix','sh_apple','sh_shokuhi','sh_gasorin','sh_goraku','sh_nisa','c_keitai','c_google','c_icloud','c_gaichuu','c_utage','c_badge','c_denki','c_yachin','c_rakuten_mobile','c_sharoshi','c_line','c_water','c_gas_suido','c_shakai_hoken','c_utage_koza','c_yakuin_shuun','c_zeirishi','c_chatgpt','c_yakuin_shouko','c_safety','c_setsuhai','c_ryohi'];
     const { data: prevData } = await window.supabase.from('company_monthly_finance').select('*').lt('year_month', currentMonth).order('year_month', { ascending: false }).limit(1).maybeSingle();
     if (prevData) {
       FIXED_FIELDS.forEach(f => {
