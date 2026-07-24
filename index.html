@@ -392,6 +392,8 @@
             <div class="field-item"><div class="field-label">chatGPT</div><div class="field-wrap"><input type="number" class="field-input" id="f_c_chatgpt" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div></div>
             <div class="field-item"><div class="field-label">役員報酬（翔子）</div><div class="field-wrap"><input type="number" class="field-input" id="f_c_yakuin_shouko" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div></div>
             <div class="field-item"><div class="field-label">セーフティ共済</div><div class="field-wrap"><input type="number" class="field-input" id="f_c_safety" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div></div>
+            <div class="field-item"><div class="field-label">接待交際費</div><div class="field-wrap"><input type="number" class="field-input" id="f_c_setsuhai" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div></div>
+            <div class="field-item"><div class="field-label">旅費交通費</div><div class="field-wrap"><input type="number" class="field-input" id="f_c_ryohi" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div></div>
           </div>
           <div class="subtotal-row"><span class="subtotal-label">法人支出 合計</span><span class="subtotal-value color-expense" id="sub_c_expense">¥0</span></div>
         </div>
@@ -625,9 +627,9 @@ async function loadCompanyData() {
     'sh_shogakukin','sh_keitai','sh_orix','sh_apple','sh_shokuhi','sh_gasorin','sh_goraku','sh_nisa',
     'c_keitai','c_google','c_icloud','c_gaichuu','c_utage','c_badge','c_denki','c_yachin',
     'c_rakuten_mobile','c_sharoshi','c_line','c_water','c_gas_suido','c_shakai_hoken',
-    'c_utage_koza','c_yakuin_shuun','c_zeirishi','c_chatgpt','c_yakuin_shouko','c_safety'];
+    'c_utage_koza','c_yakuin_shuun','c_zeirishi','c_chatgpt','c_yakuin_shouko','c_safety','c_setsuhai','c_ryohi'];
   if (!data) {
-    const FIXED_FIELDS = ['s_auto_hoken','s_fwd','s_taiyou','s_washing','s_netflix','s_rakuten_music','s_ns','s_water','s_royal_london','s_apple_cloud','s_chokin','s_nisa','s_app_hp','s_miyagin','s_btc','s_hoiku','s_kyosai','s_zeikin','sh_shogakukin','sh_keitai','sh_orix','sh_apple','sh_nisa','c_keitai','c_google','c_icloud','c_denki','c_yachin','c_sharoshi','c_line','c_water','c_gas_suido','c_shakai_hoken','c_zeirishi','c_chatgpt','c_yakuin_shouko','c_safety'];
+    const FIXED_FIELDS = ['s_auto_hoken','s_fwd','s_taiyou','s_washing','s_netflix','s_rakuten_music','s_ns','s_water','s_royal_london','s_apple_cloud','s_chokin','s_nisa','s_app_hp','s_miyagin','s_btc','s_hoiku','s_kyosai','s_zeikin','sh_shogakukin','sh_keitai','sh_orix','sh_apple','sh_nisa','c_keitai','c_google','c_icloud','c_denki','c_yachin','c_sharoshi','c_line','c_water','c_gas_suido','c_shakai_hoken','c_zeirishi','c_chatgpt','c_yakuin_shouko','c_safety','c_setsuhai','c_ryohi'];
     const { data: prevData } = await window.supabase.from('company_monthly_finance').select('*').lt('year_month', currentMonth).order('year_month', { ascending: false }).limit(1).maybeSingle();
     if (prevData) {
       FIXED_FIELDS.forEach(f => {
@@ -896,7 +898,8 @@ function recalc() {
   const cIncome = cDetailIncome + cFixedIncome;
   const cExp = sum(['f_c_keitai','f_c_google','f_c_icloud','f_c_gaichuu','f_c_utage','f_c_badge',
     'f_c_denki','f_c_yachin','f_c_rakuten_mobile','f_c_sharoshi','f_c_line','f_c_water','f_c_gas_suido',
-    'f_c_shakai_hoken','f_c_utage_koza','f_c_yakuin_shuun','f_c_zeirishi','f_c_chatgpt','f_c_yakuin_shouko','f_c_safety']);
+    'f_c_shakai_hoken','f_c_utage_koza','f_c_yakuin_shuun','f_c_zeirishi','f_c_chatgpt','f_c_yakuin_shouko','f_c_safety',
+    'f_c_setsuhai','f_c_ryohi']);
   const cDiff = cIncome - cExp;
 
   let aIncome=0, aExp=0;
@@ -1002,7 +1005,7 @@ async function loadChart() {
     return (f.c_keitai||0)+(f.c_google||0)+(f.c_icloud||0)+(f.c_gaichuu||0)+(f.c_utage||0)+(f.c_badge||0)
       +(f.c_denki||0)+(f.c_yachin||0)+(f.c_rakuten_mobile||0)+(f.c_sharoshi||0)+(f.c_line||0)+(f.c_water||0)
       +(f.c_gas_suido||0)+(f.c_shakai_hoken||0)+(f.c_utage_koza||0)+(f.c_yakuin_shuun||0)+(f.c_zeirishi||0)
-      +(f.c_chatgpt||0)+(f.c_yakuin_shouko||0)+(f.c_safety||0);
+      +(f.c_chatgpt||0)+(f.c_yakuin_shouko||0)+(f.c_safety||0)+(f.c_setsuhai||0)+(f.c_ryohi||0);
   });
   const corpDiffData = months.map((m,i) => corpIncomeData[i] - corpExpData[i]);
 
