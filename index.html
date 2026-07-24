@@ -995,8 +995,12 @@ async function loadChart() {
   const incomeData = months.map(m => {
     const f = finMap[m] || {};
     const det = detailByMonth[m] || {};
-    return ((f.p_salary||0)+(f.p_utage||0)+(f.p_shouko_yakuin||0)+(f.p_yachin||0)+(f.p_template||0))
-      + (det.corp||0) + (det.personal||0);
+    // 個人収入: 給料・歩合・顧問料・家賃・テンプレート収入
+    const personalIncome = (f.p_salary||0)+(f.p_utage||0)+(f.p_shouko_yakuin||0)+(f.p_yachin||0)+(f.p_template||0);
+    // 法人収入: 固定分（複数）+ 明細合計
+    const corpFixedTotal = (f.corp_fixed_items||[]).reduce((sum, item) => sum + (item.amount||0), 0);
+    const corpIncomeTotal = (f.corp_income||0);
+    return personalIncome + (det.corp||0) + (det.personal||0) + corpFixedTotal + corpIncomeTotal;
   });
   const expData = months.map(m => {
     const f = finMap[m] || {};
@@ -1024,12 +1028,28 @@ async function loadChart() {
       datasets: [
         { label: '収入', data: incomeData, backgroundColor: 'rgba(39,174,122,0.7)', borderRadius: 4 },
         { label: '支出', data: expData, backgroundColor: 'rgba(201,59,95,0.5)', borderRadius: 4 },
-        { type: 'line', label: '差引', data: diffData, borderColor: '#3B5FC9', backgroundColor: 'rgba(59,95,201,0.1)', tension: 0.3, pointRadius: 4 }
+        { type: 'line', label: '差引（収入-支出）', data: diffData, borderColor: '#3B5FC9', backgroundColor: 'rgba(59,95,201,0.1)', tension: 0.3, pointRadius: 4 }
       ]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ¥${ctx.raw.toLocaleString()}` } } },
+      plugins: {
+        legend: { position: 'top', labels: { padding: 15, font: { size: 13, weight: 600 } } },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const label = ctx.dataset.label;
+              const value = ctx.raw;
+              return `${label}: ¥${value.toLocaleString()}`;
+            },
+            afterLabel: ctx => {
+              if (ctx.dataset.label === '収入') return '個人:給料/歩合/顧問料/家賃/テンプレート + 法人:固定分/明細 + インセン';
+              if (ctx.dataset.label === '支出') return '個人全支出 + 配偶者全支出 + 法人全支出';
+              return '';
+            }
+          }
+        }
+      },
       scales: { y: { ticks: { callback: v => `¥${(v/10000).toFixed(0)}万` } } }
     }
   });
