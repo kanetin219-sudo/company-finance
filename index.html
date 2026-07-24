@@ -891,7 +891,9 @@ function recalc() {
   const pExp = sExp + shExp;
   const pDiff = pIncome - pExp;
 
-  const cIncome = incomeDetails.filter(d=>d.category==='corp').reduce((a,d)=>a+d.amount,0);
+  const cDetailIncome = incomeDetails.filter(d=>d.category==='corp').reduce((a,d)=>a+d.amount,0);
+  const cFixedIncome = corpFixedItems.reduce((a,d)=>a+(d.amount||0),0);
+  const cIncome = cDetailIncome + cFixedIncome;
   const cExp = sum(['f_c_keitai','f_c_google','f_c_icloud','f_c_gaichuu','f_c_utage','f_c_badge',
     'f_c_denki','f_c_yachin','f_c_rakuten_mobile','f_c_sharoshi','f_c_line','f_c_water','f_c_gas_suido',
     'f_c_shakai_hoken','f_c_utage_koza','f_c_yakuin_shuun','f_c_zeirishi','f_c_chatgpt','f_c_yakuin_shouko','f_c_safety']);
@@ -937,7 +939,7 @@ function recalc() {
   setDiff('sm_p_diff', pDiff);
   setText('sm_c_income', fmt(cIncome));
   setText('sm_c_expense', fmt(cExp));
-  setDiff('sm_c_diff', aDiff);
+  setDiff('sm_c_diff', cDiff);
   setText('sm_a_income', fmt(aIncome));
   setText('sm_a_expense', fmt(aExp));
   setDiff('sm_a_diff', aDiff);
