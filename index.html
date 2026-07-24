@@ -321,6 +321,23 @@
     <!-- ════ 法人収支タブ ════ -->
     <div class="tab-panel" id="tab_corp">
 
+      <!-- 収入（法人固定分） -->
+      <div class="input-section">
+        <div class="sec-header corp-inc" onclick="toggleSec('c_fixed_income')">
+          <span>収入（法人固定分）</span>
+          <span class="sec-toggle" id="tog_c_fixed_income">▼</span>
+        </div>
+        <div class="sec-body" id="c_fixed_income">
+          <div class="fields-grid" id="c_fixed_items_container"></div>
+          <div style="margin-top:12px;display:flex;gap:8px;">
+            <input type="text" class="detail-input" id="c_new_item_name" placeholder="項目名" style="flex:1;">
+            <input type="number" class="detail-input" id="c_new_item_amount" placeholder="金額" min="0" style="flex:1;text-align:right;">
+            <button class="detail-add-btn" onclick="addCorpFixedItem()" style="white-space:nowrap;">＋ 追加</button>
+          </div>
+          <div class="subtotal-row"><span class="subtotal-label">法人固定収入 合計</span><span class="subtotal-value color-income" id="sub_c_fixed_income">¥0</span></div>
+        </div>
+      </div>
+
       <!-- 収入明細入力 -->
       <div class="input-section">
         <div class="sec-header corp-inc">
@@ -526,6 +543,7 @@
 let currentMonth = '';
 let anellaData = null;
 let incomeDetails = [];
+let corpFixedItems = [];
 let chartInstance = null;
 
 // ─────────────────────────────────────────
@@ -618,11 +636,15 @@ async function loadCompanyData() {
       FIXED_FIELDS.forEach(f => {
         if (prevData[f]) setV('f_' + f, prevData[f]);
       });
+      corpFixedItems = prevData.corp_fixed_items || [];
+      renderCorpFixedItems();
       console.log('固定費を前月から自動入力しました');
     }
     return;
   }
   flds.forEach(f => setV('f_' + f, data[f]));
+  corpFixedItems = data.corp_fixed_items || [];
+  renderCorpFixedItems();
 }
 
 async function loadIncomeDetails() {
@@ -714,10 +736,69 @@ async function deleteIncomeDetail(id) {
 async function syncIncomeToFinance() {
   const corpIncome = incomeDetails.filter(d=>d.category==='corp').reduce((a,d)=>a+d.amount,0);
   const personalIncome = incomeDetails.filter(d=>d.category==='personal').reduce((a,d)=>a+d.amount,0);
+  const corpFixedIncome = corpFixedItems.reduce((a,d)=>a+(d.amount||0),0);
   await window.supabase.from('company_monthly_finance').upsert({
     year_month: currentMonth,
-    corp_income: corpIncome,
+    corp_income: corpIncome + corpFixedIncome,
     p_income_other: personalIncome,
+    corp_fixed_items: corpFixedItems,
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'year_month' });
+}
+
+function renderCorpFixedItems() {
+  const container = document.getElementById('c_fixed_items_container');
+  if (!corpFixedItems.length) {
+    container.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-soft);padding:20px;">カスタム項目を追加してください</div>';
+  } else {
+    container.innerHTML = corpFixedItems.map((item, idx) => `
+      <div class="field-item">
+        <div class="field-label">${escHtml(item.name)}</div>
+        <div class="field-wrap">
+          <input type="number" class="field-input" value="${item.amount}" min="0" onchange="updateCorpFixedItem(${idx}, this.value)" style="text-align:right;">
+          <span class="field-unit">円</span>
+          <button onclick="deleteCorpFixedItem(${idx})" style="background:none;border:none;color:var(--warn);cursor:pointer;padding:0 4px;font-weight:bold;">×</button>
+        </div>
+      </div>
+    `).join('');
+  }
+  updateCorpFixedTotal();
+}
+
+function updateCorpFixedItem(idx, amount) {
+  corpFixedItems[idx].amount = parseInt(amount) || 0;
+  updateCorpFixedTotal();
+  saveCorpFixedItems();
+}
+
+function deleteCorpFixedItem(idx) {
+  if (!confirm('削除するっちゃ？')) return;
+  corpFixedItems.splice(idx, 1);
+  renderCorpFixedItems();
+  saveCorpFixedItems();
+}
+
+function addCorpFixedItem() {
+  const name = document.getElementById('c_new_item_name').value.trim();
+  const amount = parseInt(document.getElementById('c_new_item_amount').value) || 0;
+  if (!name) { alert('項目名を入力してください'); return; }
+  corpFixedItems.push({name, amount});
+  document.getElementById('c_new_item_name').value = '';
+  document.getElementById('c_new_item_amount').value = '';
+  renderCorpFixedItems();
+  saveCorpFixedItems();
+}
+
+function updateCorpFixedTotal() {
+  const total = corpFixedItems.reduce((a,d)=>a+(d.amount||0),0);
+  setText('sub_c_fixed_income', fmt(total));
+  recalc();
+}
+
+async function saveCorpFixedItems() {
+  await window.supabase.from('company_monthly_finance').upsert({
+    year_month: currentMonth,
+    corp_fixed_items: corpFixedItems,
     updated_at: new Date().toISOString()
   }, { onConflict: 'year_month' });
 }
