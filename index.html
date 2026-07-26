@@ -1035,7 +1035,7 @@ async function loadChart() {
   });
   const anellaExpData = months.map(m => {
     const a = anellaMap[m] || {};
-    return (a.jinken_hi||0)+(a.shakai_hoken||0)+(a.roshu_kocho||0)+(a.yachin||0)+(a.chushajo||0)
+    return (a.jinken_hi||0)+(a.shakai_hoken||0)+(a.roshu_kocho||0)+(a.sosokin_driver_kyuyo||0)+(a.yachin||0)+(a.chushajo||0)
       +(a.denki||0)+(a.suido||0)+(a.gas_hi||0)+(a.gomi||0)+(a.net_phone||0)+(a.knowbee||0)
       +(a.smaregi||0)+(a.elearning||0)+(a.retailzino||0)+(a.keitai||0)+(a.butsuhan_shiire||0)
       +(a.pet_goods||0)+(a.aroma||0)+(a.camera||0)+(a.sharyo_hi||0)+(a.hoken||0)+(a.riyosha_hoken||0)
@@ -1043,6 +1043,11 @@ async function loadChart() {
       +(a.riyosha_shokuhi||0);
   });
   const anellaDiffData = months.map((m,i) => anellaIncomeData[i] - anellaExpData[i]);
+
+  // デバッグ出力
+  console.log('6月のアネラデータ:', anellaMap['2026-06']);
+  console.log('anellaExpData全体:', anellaExpData);
+  console.log('6月（4番目）支出:', anellaExpData[4]);
 
   document.getElementById('chartLoading').style.display = 'none';
   const canvas = document.getElementById('mainChart');
