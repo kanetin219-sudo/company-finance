@@ -177,9 +177,13 @@
     .save-btn:hover { opacity: 0.9; }
     .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .badge { display: inline-block; font-size: 10px; background: var(--primary-light); color: #fff; border-radius: 4px; padding: 1px 6px; margin-left: 6px; }
+    /* ─── デバッグ表示 ─── */
+    #debugInfo { position: fixed; top: 60px; right: 20px; background: rgba(0,0,0,0.9); color: #0f0; font-family: monospace; font-size: 11px; padding: 10px; border-radius: 6px; max-width: 400px; max-height: 300px; overflow-y: auto; z-index: 999; display: none; line-height: 1.4; }
   </style>
 </head>
 <body>
+
+<div id="debugInfo"></div>
 
 <!-- ─── ログイン ─── -->
 <div id="loginScreen">
@@ -1046,9 +1050,23 @@ async function loadChart() {
   const anellaDiffData = months.map((m,i) => anellaIncomeData[i] - anellaExpData[i]);
 
   // デバッグ出力
-  console.log('6月のアネラデータ:', anellaMap['2026-06']);
+  const june = anellaMap['2026-06'] || {};
+  const juneExpense = anellaExpData[4];
+  console.log('6月のアネラデータ:', june);
   console.log('anellaExpData全体:', anellaExpData);
-  console.log('6月（4番目）支出:', anellaExpData[4]);
+  console.log('6月（4番目）支出:', juneExpense);
+
+  // 画面にデバッグ情報を表示
+  const debugDiv = document.getElementById('debugInfo');
+  debugDiv.style.display = 'block';
+  debugDiv.innerHTML = `
+    <div>【デバッグ情報】</div>
+    <div>6月支出: ¥${juneExpense?.toLocaleString('ja-JP') || '計算中'}</div>
+    <div>人件費: ¥${(june.jinken_hi||0).toLocaleString('ja-JP')}</div>
+    <div>社会保険: ¥${(june.shakai_hoken||0).toLocaleString('ja-JP')}</div>
+    <div>就労工賃: ¥${(june.roshu_kocho||0).toLocaleString('ja-JP')}</div>
+    <div>送迎給与: ¥${(june.sosokin_driver_kyuyo||0).toLocaleString('ja-JP')}</div>
+  `.replace(/\n/g, '');
 
   document.getElementById('chartLoading').style.display = 'none';
   const canvas = document.getElementById('mainChart');
