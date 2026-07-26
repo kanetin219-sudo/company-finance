@@ -167,6 +167,10 @@
     .save-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); padding: 14px 20px; display: flex; justify-content: flex-end; align-items: center; gap: 14px; z-index: 99; box-shadow: 0 -4px 16px var(--shadow); }
     .save-status { font-size: 13px; color: var(--text-soft); }
     .save-status.ok { color: var(--accent); }
+
+    /* ─── キャッシュクリアボタン ─── */
+    .btn-clear-cache { padding: 8px 14px; background: #FF6B6B; color: #fff; border: none; border-radius: 6px; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; }
+    .btn-clear-cache:hover { opacity: 0.9; }
     .save-status.err { color: var(--warn); }
     .save-btn { padding: 12px 32px; background: var(--primary); color: #fff; border: none; border-radius: 10px; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
     .save-btn:hover { opacity: 0.9; }
@@ -203,6 +207,7 @@
       <button class="btn-this-month" onclick="goThisMonth()">今月</button>
     </div>
     <div class="admin-header-right">
+      <button class="btn-clear-cache" onclick="clearAllCaches()">キャッシュクリア</button>
       <span class="admin-user" id="userEmail"></span>
       <button class="logout-btn" onclick="doLogout()">ログアウト</button>
     </div>
@@ -1142,6 +1147,32 @@ function setV(id, v) { const el=document.getElementById(id); if(el) el.value=v||
 function setText(id, t) { const el=document.getElementById(id); if(el) el.textContent=t; }
 function sum(ids) { return ids.reduce((a,id)=>a+getV(id),0); }
 function fmt(n) { return '¥'+n.toLocaleString('ja-JP'); }
+
+function clearAllCaches() {
+  if (!confirm('全キャッシュをクリアして再読み込みしますか？')) return;
+
+  // LocalStorage クリア
+  localStorage.clear();
+
+  // SessionStorage クリア
+  sessionStorage.clear();
+
+  // Service Worker キャッシュクリア
+  if ('caches' in window) {
+    caches.keys().then(names => names.forEach(name => caches.delete(name)));
+  }
+
+  // IndexedDB クリア
+  if ('indexedDB' in window) {
+    const dbs = ['supabase', 'cache'];
+    dbs.forEach(db => {
+      try { indexedDB.deleteDatabase(db); } catch(e) {}
+    });
+  }
+
+  alert('キャッシュをクリアしました。ページを再読み込みします。');
+  location.reload();
+}
 function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function setDiff(id, v) {
