@@ -688,12 +688,12 @@ async function loadAnellaData() {
   if (!data) { document.getElementById('anellaEmpty').style.display = 'block'; return; }
   anellaData = data;
   const income = (data.cafe_uriage||0)+(data.kyufu_hi||0)+(data.sonota_uriage||0);
-  const expense = (data.jinken_hi||0)+(data.shakai_hoken||0)+(data.roshu_kocho||0)
+  const expense = (data.jinken_hi||0)+(data.shakai_hoken||0)+(data.roshu_kocho||0)+(data.sosokin_driver_kyuyo||0)
     +(data.yachin||0)+(data.chushajo||0)+(data.denki||0)+(data.suido||0)+(data.gas_hi||0)+(data.gomi||0)
     +(data.net_phone||0)+(data.knowbee||0)+(data.smaregi||0)+(data.elearning||0)+(data.retailzino||0)+(data.keitai||0)
     +(data.butsuhan_shiire||0)+(data.pet_goods||0)+(data.aroma||0)+(data.camera||0)
     +(data.sharyo_hi||0)+(data.hoken||0)+(data.riyosha_hoken||0)
-    +(data.kokoku_hi||0)+(data.hensei||0)+(data.royalty||0)+(data.jiraiino||0)
+    +(data.kokoku_hi||0)+(data.royalty||0)+(data.jiraiino||0)
     +(data.chiiki_koken||0)+(data.zappi||0)+(data.riyosha_shokuhi||0);
   const profit = income - expense;
   const map = {a_cafe_uriage:'cafe_uriage',a_kyufu_hi:'kyufu_hi',a_sonota_uriage:'sonota_uriage',
@@ -924,7 +924,7 @@ function recalc() {
   let aIncome=0, aExp=0;
   if (anellaData) {
     aIncome = (anellaData.cafe_uriage||0)+(anellaData.kyufu_hi||0)+(anellaData.sonota_uriage||0);
-    aExp = (anellaData.jinken_hi||0)+(anellaData.shakai_hoken||0)+(anellaData.roshu_kocho||0)
+    aExp = (anellaData.jinken_hi||0)+(anellaData.shakai_hoken||0)+(anellaData.roshu_kocho||0)+(anellaData.sosokin_driver_kyuyo||0)
       +(anellaData.yachin||0)+(anellaData.chushajo||0)+(anellaData.denki||0)+(anellaData.suido||0)+(anellaData.gas_hi||0)+(anellaData.gomi||0)
       +(anellaData.net_phone||0)+(anellaData.knowbee||0)+(anellaData.smaregi||0)+(anellaData.elearning||0)+(anellaData.retailzino||0)+(anellaData.keitai||0)
       +(anellaData.butsuhan_shiire||0)+(anellaData.pet_goods||0)+(anellaData.aroma||0)+(anellaData.camera||0)
