@@ -478,6 +478,16 @@
         </div>
       </div>
 
+      <!-- 接待交際費・旅費交通費の推移 -->
+      <div class="chart-section">
+        <h3>接待交際費・旅費交通費の推移</h3>
+        <div class="chart-wrap">
+          <div class="chart-loading" id="keihiChartLoading">グラフデータ読込中…</div>
+          <canvas id="keihiChart" style="display:none;"></canvas>
+        </div>
+        <div id="keihiTable" style="margin-top:16px;"></div>
+      </div>
+
       <div class="summary-section">
         <h3>個人収支</h3>
         <div class="summary-row"><span class="summary-row-label">収入（固定）</span><span class="summary-row-value color-income" id="sm_p_income">¥0</span></div>
@@ -994,6 +1004,90 @@ function recalc() {
 // ─────────────────────────────────────────
 // グラフ
 // ─────────────────────────────────────────
+// ── 接待交際費・旅費交通費の推移 ──────────────────
+let keihiChartInstance = null;
+
+async function loadKeihiChart() {
+  const loading = document.getElementById('keihiChartLoading');
+  const canvas  = document.getElementById('keihiChart');
+  const tableEl = document.getElementById('keihiTable');
+  if (!canvas) return;
+  loading.style.display = 'block';
+  canvas.style.display  = 'none';
+
+  const months = getLast12Months();
+  const { data } = await window.supabase
+    .from('company_monthly_finance')
+    .select('year_month, c_setsuhai, c_ryohi')
+    .gte('year_month', months[0])
+    .lte('year_month', months[months.length - 1])
+    .order('year_month');
+
+  const map = Object.fromEntries((data || []).map(d => [d.year_month, d]));
+  // 両方0の月はグラフに出さない（未入力の月で潰れないように）
+  const shown = months.filter(m => (map[m]?.c_setsuhai || 0) > 0 || (map[m]?.c_ryohi || 0) > 0);
+  const labels    = shown.map(m => { const [y, mo] = m.split('-'); return `${y.slice(2)}/${mo}月`; });
+  const setsuhai  = shown.map(m => map[m]?.c_setsuhai || 0);
+  const ryohi     = shown.map(m => map[m]?.c_ryohi    || 0);
+
+  loading.style.display = 'none';
+  canvas.style.display  = 'block';
+
+  if (keihiChartInstance) keihiChartInstance.destroy();
+  keihiChartInstance = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: '接待交際費', data: setsuhai, backgroundColor: 'rgba(232,148,59,0.8)', borderRadius: 4 },
+        { label: '旅費交通費', data: ryohi,    backgroundColor: 'rgba(59,95,201,0.75)', borderRadius: 4 },
+        { type: 'line', label: '合計', data: shown.map((m, i) => setsuhai[i] + ryohi[i]),
+          borderColor: '#C93B5F', backgroundColor: 'rgba(201,59,95,0.1)', tension: 0.3, pointRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: { callbacks: { label: c => `${c.dataset.label}: ${fmt(c.parsed.y)}` } }
+      },
+      scales: { y: { beginAtZero: true, ticks: { callback: v => '¥' + v.toLocaleString('ja-JP') } } }
+    }
+  });
+
+  // 一覧表（合計つき）
+  const totalS = setsuhai.reduce((a, b) => a + b, 0);
+  const totalR = ryohi.reduce((a, b) => a + b, 0);
+  tableEl.innerHTML = shown.length === 0 ? '' : `
+    <table style="width:100%; border-collapse:collapse; font-size:14px;">
+      <thead>
+        <tr style="border-bottom:2px solid #ddd;">
+          <th style="text-align:left; padding:6px;">月</th>
+          <th style="text-align:right; padding:6px;">接待交際費</th>
+          <th style="text-align:right; padding:6px;">旅費交通費</th>
+          <th style="text-align:right; padding:6px;">合計</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${shown.map((m, i) => `
+          <tr style="border-bottom:1px solid #eee;">
+            <td style="padding:6px;">${labels[i]}</td>
+            <td style="text-align:right; padding:6px;">${fmt(setsuhai[i])}</td>
+            <td style="text-align:right; padding:6px;">${fmt(ryohi[i])}</td>
+            <td style="text-align:right; padding:6px; font-weight:700;">${fmt(setsuhai[i] + ryohi[i])}</td>
+          </tr>`).join('')}
+      </tbody>
+      <tfoot>
+        <tr style="border-top:2px solid #ddd; font-weight:700;">
+          <td style="padding:6px;">合計</td>
+          <td style="text-align:right; padding:6px;">${fmt(totalS)}</td>
+          <td style="text-align:right; padding:6px;">${fmt(totalR)}</td>
+          <td style="text-align:right; padding:6px;">${fmt(totalS + totalR)}</td>
+        </tr>
+      </tfoot>
+    </table>`;
+}
+
 async function loadChart() {
   // キャッシュクリア
   if ('caches' in window) {
@@ -1222,7 +1316,7 @@ function switchTab(name) {
   document.getElementById('tab_'+name).classList.add('active');
   const idx=['personal','corp','anella','summary'].indexOf(name);
   document.querySelectorAll('.tab-btn')[idx].classList.add('active');
-  if (name === 'summary') loadChart();
+  if (name === 'summary') { loadChart(); loadKeihiChart(); }
 }
 
 init();
