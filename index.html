@@ -673,7 +673,7 @@ async function loadCompanyData() {
 
 async function loadIncomeDetails() {
   const { data, error } = await window.supabase.from('company_income_detail')
-    .select('*').eq('year_month', currentMonth).order('created_at');
+    .select('*').eq('year_month', currentMonth).is('deleted_at', null).order('created_at');
   if (error) {
     console.error('明細取得エラー:', error);
     const list = document.getElementById('detailList');
@@ -684,7 +684,7 @@ async function loadIncomeDetails() {
 
   // すべての月からサービス名を取得（よく使うサービスの履歴を保持）
   const { data: allDetails } = await window.supabase.from('company_income_detail')
-    .select('name');
+    .select('name').is('deleted_at', null);
   window.allServiceNamesHistory = allDetails ? [...new Set(allDetails.map(d => d.name).filter(n => n))] : [];
 
   renderIncomeDetails();
@@ -779,7 +779,10 @@ async function editIncomeDetail(id) {
 
 async function deleteIncomeDetail(id) {
   if (!confirm('削除するっちゃ？')) return;
-  await window.supabase.from('company_income_detail').delete().eq('id', id);
+  // 論理削除。消した記録自体は残す（データ削除禁止ルール）
+  const { error: delErr } = await window.supabase.from('company_income_detail')
+    .update({ deleted_at: new Date().toISOString() }).eq('id', id);
+  if (delErr) { alert('削除に失敗したっちゃ: ' + delErr.message); return; }
   incomeDetails = incomeDetails.filter(d => d.id !== id);
   renderIncomeDetails();
   recalc();
