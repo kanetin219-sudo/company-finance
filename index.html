@@ -400,6 +400,8 @@
             <div class="field-item"><div class="field-label">ガス・水道</div><div class="field-wrap"><input type="number" class="field-input" id="f_c_gas_suido" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div></div>
             <div class="field-item"><div class="field-label">社会保険</div><div class="field-wrap"><input type="number" class="field-input" id="f_c_shakai_hoken" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div></div>
             <div class="field-item"><div class="field-label">ウタゲ講座</div><div class="field-wrap"><input type="number" class="field-input" id="f_c_utage_koza" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div></div>
+            <div class="field-item"><div class="field-label">バズ塾</div><div class="field-wrap"><input type="number" class="field-input" id="f_c_buzz_juku" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div></div>
+            <div class="field-item"><div class="field-label">トラビア</div><div class="field-wrap"><input type="number" class="field-input" id="f_c_travia" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div></div>
             <div class="field-item"><div class="field-label">役員報酬（駿）</div><div class="field-wrap"><input type="number" class="field-input" id="f_c_yakuin_shuun" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div></div>
             <div class="field-item"><div class="field-label">税理士</div><div class="field-wrap"><input type="number" class="field-input" id="f_c_zeirishi" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div></div>
             <div class="field-item"><div class="field-label">chatGPT</div><div class="field-wrap"><input type="number" class="field-input" id="f_c_chatgpt" min="0" placeholder="0" oninput="recalc()"><span class="field-unit">円</span></div></div>
@@ -650,9 +652,9 @@ async function loadCompanyData() {
     'sh_shogakukin','sh_keitai','sh_orix','sh_apple','sh_shokuhi','sh_gasorin','sh_goraku','sh_nisa',
     'c_keitai','c_google','c_icloud','c_gaichuu','c_utage','c_badge','c_denki','c_yachin',
     'c_rakuten_mobile','c_sharoshi','c_line','c_water','c_gas_suido','c_shakai_hoken',
-    'c_utage_koza','c_yakuin_shuun','c_zeirishi','c_chatgpt','c_yakuin_shouko','c_safety','c_setsuhai','c_ryohi'];
+    'c_utage_koza','c_buzz_juku','c_travia','c_yakuin_shuun','c_zeirishi','c_chatgpt','c_yakuin_shouko','c_safety','c_setsuhai','c_ryohi'];
   if (!data) {
-    const FIXED_FIELDS = ['s_lp','s_keitai','s_auto_hoken','s_shogakukin','s_car_loan','s_fwd','s_taiyou','s_washing','s_yachin','s_netflix','s_rakuten_music','s_ns','s_water','s_royal_london','s_apple_cloud','s_chokin','s_nisa','s_app_hp','s_miyagin','s_btc','s_hoiku','s_kyosai','s_zeikin','sh_shogakukin','sh_keitai','sh_orix','sh_apple','sh_shokuhi','sh_gasorin','sh_goraku','sh_nisa','c_keitai','c_google','c_icloud','c_gaichuu','c_utage','c_badge','c_denki','c_yachin','c_rakuten_mobile','c_sharoshi','c_line','c_water','c_gas_suido','c_shakai_hoken','c_utage_koza','c_yakuin_shuun','c_zeirishi','c_chatgpt','c_yakuin_shouko','c_safety','c_setsuhai','c_ryohi'];
+    const FIXED_FIELDS = ['s_lp','s_keitai','s_auto_hoken','s_shogakukin','s_car_loan','s_fwd','s_taiyou','s_washing','s_yachin','s_netflix','s_rakuten_music','s_ns','s_water','s_royal_london','s_apple_cloud','s_chokin','s_nisa','s_app_hp','s_miyagin','s_btc','s_hoiku','s_kyosai','s_zeikin','sh_shogakukin','sh_keitai','sh_orix','sh_apple','sh_shokuhi','sh_gasorin','sh_goraku','sh_nisa','c_keitai','c_google','c_icloud','c_gaichuu','c_utage','c_badge','c_denki','c_yachin','c_rakuten_mobile','c_sharoshi','c_line','c_water','c_gas_suido','c_shakai_hoken','c_utage_koza','c_buzz_juku','c_travia','c_yakuin_shuun','c_zeirishi','c_chatgpt','c_yakuin_shouko','c_safety','c_setsuhai','c_ryohi'];
     const { data: prevData } = await window.supabase.from('company_monthly_finance').select('*').lt('year_month', currentMonth).order('year_month', { ascending: false }).limit(1).maybeSingle();
     if (prevData) {
       FIXED_FIELDS.forEach(f => {
@@ -927,7 +929,7 @@ function recalc() {
   const cIncome = cDetailIncome + cFixedIncome;
   const cExp = sum(['f_c_keitai','f_c_google','f_c_icloud','f_c_gaichuu','f_c_utage','f_c_badge',
     'f_c_denki','f_c_yachin','f_c_rakuten_mobile','f_c_sharoshi','f_c_line','f_c_water','f_c_gas_suido',
-    'f_c_shakai_hoken','f_c_utage_koza','f_c_yakuin_shuun','f_c_zeirishi','f_c_chatgpt','f_c_yakuin_shouko','f_c_safety',
+    'f_c_shakai_hoken','f_c_utage_koza','f_c_buzz_juku','f_c_travia','f_c_yakuin_shuun','f_c_zeirishi','f_c_chatgpt','f_c_yakuin_shouko','f_c_safety',
     'f_c_setsuhai','f_c_ryohi']);
   const cDiff = cIncome - cExp;
 
@@ -1122,7 +1124,7 @@ async function loadChart() {
     const f = finMap[m] || {};
     return (f.c_keitai||0)+(f.c_google||0)+(f.c_icloud||0)+(f.c_gaichuu||0)+(f.c_utage||0)+(f.c_badge||0)
       +(f.c_denki||0)+(f.c_yachin||0)+(f.c_rakuten_mobile||0)+(f.c_sharoshi||0)+(f.c_line||0)+(f.c_water||0)
-      +(f.c_gas_suido||0)+(f.c_shakai_hoken||0)+(f.c_utage_koza||0)+(f.c_yakuin_shuun||0)+(f.c_zeirishi||0)
+      +(f.c_gas_suido||0)+(f.c_shakai_hoken||0)+(f.c_utage_koza||0)+(f.c_buzz_juku||0)+(f.c_travia||0)+(f.c_yakuin_shuun||0)+(f.c_zeirishi||0)
       +(f.c_chatgpt||0)+(f.c_yakuin_shouko||0)+(f.c_safety||0)+(f.c_setsuhai||0)+(f.c_ryohi||0);
   });
   const corpDiffData = months.map((m,i) => corpIncomeData[i] - corpExpData[i]);
@@ -1245,7 +1247,7 @@ async function saveData() {
     c_denki: getV('f_c_denki'), c_yachin: getV('f_c_yachin'), c_rakuten_mobile: getV('f_c_rakuten_mobile'),
     c_sharoshi: getV('f_c_sharoshi'), c_line: getV('f_c_line'), c_water: getV('f_c_water'),
     c_gas_suido: getV('f_c_gas_suido'), c_shakai_hoken: getV('f_c_shakai_hoken'),
-    c_utage_koza: getV('f_c_utage_koza'), c_yakuin_shuun: getV('f_c_yakuin_shuun'),
+    c_utage_koza: getV('f_c_utage_koza'), c_buzz_juku: getV('f_c_buzz_juku'), c_travia: getV('f_c_travia'), c_yakuin_shuun: getV('f_c_yakuin_shuun'),
     c_zeirishi: getV('f_c_zeirishi'), c_chatgpt: getV('f_c_chatgpt'),
     c_yakuin_shouko: getV('f_c_yakuin_shouko'), c_safety: getV('f_c_safety'),
     c_setsuhai: getV('f_c_setsuhai'), c_ryohi: getV('f_c_ryohi'),
